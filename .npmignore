@@ -1,0 +1,9 @@
+src/
+node_modules/
+tsconfig.json
+vite.config.ts
+eslint.config.js
+.prettierrc.json
+*.tsbuildinfo
+.mf/
+.github/

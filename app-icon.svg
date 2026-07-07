@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Autologin">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f7dd1"/>
+      <stop offset="1" stop-color="#1c5a9e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- open shackle: the bow swings clear of the body to signal "unlocked / auto access" -->
+  <path d="M182 232 V150 a74 74 0 0 1 143 -26"
+        fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round"/>
+  <!-- lock body -->
+  <rect x="138" y="232" width="176" height="146" rx="26" fill="#ffffff"/>
+  <!-- lightning bolt = automatic, no-login access -->
+  <path d="M238 258 l-42 66 h34 l-14 52 l50 -74 h-34 z" fill="#f6b73c"/>
+  <!-- keyhole hint on the right, tying it to identity/login -->
+  <circle cx="356" cy="316" r="10" fill="#ffffff" opacity="0.55"/>
+</svg>
