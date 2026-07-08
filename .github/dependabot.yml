@@ -16,6 +16,11 @@ updates:
       # Allow updates within the v22.x line; ignore v23+.
       - dependency-name: '@types/node'
         versions: ['>=23']
+      # typescript-eslint peer-caps typescript at <6.1.0, and the Signal K
+      # plugin ecosystem is on TS 6. Ignore TS 7+ (the native port) until
+      # the linter's peer range catches up; a 7.x bump breaks npm install.
+      - dependency-name: 'typescript'
+        versions: ['>=7']
 
   - package-ecosystem: github-actions
     directory: '/'
