@@ -15,6 +15,9 @@
 
 name: SignalK Plugin CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
