@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "Convenience autologin for Signal K: treat every device as an admin without a login. The modern replacement for security-off. Trusted networks only.",
   "main": "plugin/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dirkwa/signalk-autologin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dirkwa/signalk-autologin/issues"
+  },
+  "homepage": "https://github.com/dirkwa/signalk-autologin#readme",
   "type": "module",
   "signalk-plugin-enabled-by-default": true,
   "scripts": {
