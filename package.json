@@ -1,6 +1,6 @@
 {
   "name": "signalk-autologin",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Convenience autologin for Signal K: treat every device as an admin without a login. The modern replacement for security-off. Trusted networks only.",
   "main": "plugin/index.js",
   "type": "module",
