@@ -27,8 +27,9 @@
     "plugin/**/*",
     "public/**/*",
     "app-icon.svg",
-    "README.md",
-    "LICENSE"
+    "LICENSE.md",
+    "LICENSE-Apache-2.0-through-v0.x.txt",
+    "README.md"
   ],
   "engines": {
     "node": ">=22",
@@ -60,5 +61,5 @@
     "vite": "^8.0.11",
     "vitest": "^4.1.10"
   },
-  "license": "Apache-2.0"
+  "license": "SEE LICENSE IN LICENSE.md"
 }
