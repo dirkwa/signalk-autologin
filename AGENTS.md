@@ -108,7 +108,9 @@ true` — a boolean field, **not** a keyword.
 
 ## Local verification
 
-There is no automated test suite yet; verify against a throwaway security-enabled server:
+`npm test` runs the unit suite over the Express-free logic in `src/autologin.ts`. It
+cannot cover the parts that only exist against a live server, so also verify against a
+throwaway security-enabled server:
 
 1. Create a disk-backed config dir (not `/tmp` — that's tmpfs on trixie) with a `security.json`
    (`strategy: "@signalk/sk-simple-token-security"`, one `type:'admin'` user, bcryptjs-hashed
@@ -143,9 +145,9 @@ Maintained by Dirk Wahrheit. Follow strictly.
 - **Angular conventional commits**: `<type>(<scope>): <subject>`, ≤50-char imperative subject,
   no period. Types: `feat|fix|docs|style|refactor|test|chore|perf`.
 - No `Co-Authored-By` lines, no "Generated with Claude Code" attribution anywhere.
-- One logical change per commit / PR. Version bumps go in their own `chore(release): X.Y.Z`.
+- One logical change per commit / PR. Do not write a version bump by hand — release-please owns it (see Release flow).
 - Never commit unasked; never push or publish without explicit approval.
-- **NEVER change the version number** except in a deliberate release-bump commit.
+- **NEVER change the version number** by hand. release-please writes it into the release PR it opens.
 
 ### Pre-PR / pre-push checklist
 
@@ -153,6 +155,30 @@ Maintained by Dirk Wahrheit. Follow strictly.
 2. `npm run build` — `tsc` + `vite build` must both succeed; sanity-check the panel bundle did
    not bundle its own React (host-shim present).
 3. `npm run lint` — read-only verification of step 1.
-4. Verify the plugin end-to-end against a security-enabled server (see Local verification).
+4. `npm test` — the unit suite.
+5. Verify the plugin end-to-end against a security-enabled server (see Local verification).
 
 Only push after all pass, and only with explicit approval.
+
+### Release flow
+
+release-please owns the release. Merging a releasable commit to master opens a
+`chore: release X.Y.Z` PR that bumps `package.json`; merging that PR creates the tag and
+the GitHub Release, then dispatches `publish.yml` on the tag to run `npm publish`.
+
+- Land work through a normal PR. Never open a hand-written `chore(release)` PR.
+- `versioning: always-bump-patch` makes every release a PATCH. For a minor or major, put a
+  `Release-As: X.Y.Z` footer on a commit.
+- Merging the release PR is what publishes to npm, so it needs explicit approval like any
+  other publish.
+
+A release is only proposed when the push carries a commit users get — `feat`, `fix`,
+`perf`, a revert, any `type!`, a `BREAKING CHANGE:` footer or `build(deps)`. Pure `chore`,
+`docs`, `ci`, `test` and `build(deps-dev)` do not propose one. See the `gate` job in
+`.github/workflows/release-please.yml`.
+
+Because this repository lands pull requests as merge commits as well as squashes, that gate
+reads the pull-request title line of a merge commit in addition to the subject.
+
+Pre-release tags (`vX.Y.Z-beta.N`, `vX.Y.Z-rc.N`) are still pushed by hand and publish under
+the `beta` dist-tag; only those get their GitHub Release created by `publish.yml`.
