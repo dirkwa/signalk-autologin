@@ -167,7 +167,8 @@ release-please owns the release. Merging a releasable commit to master opens a
 the GitHub Release, then dispatches `publish.yml` on the tag to run `npm publish`.
 
 - Land work through a normal PR. Never open a hand-written `chore(release)` PR.
-- `versioning: always-bump-patch` makes every release a PATCH. For a minor or major, put a
+- The bump follows the commit type: `feat` minor, `fix`/`perf` patch, `!` or a
+  `BREAKING CHANGE:` footer major. To release a specific version instead, put a
   `Release-As: X.Y.Z` footer on a commit.
 - Merging the release PR is what publishes to npm, so it needs explicit approval like any
   other publish.
