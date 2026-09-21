@@ -181,5 +181,7 @@ A release is only proposed when the push carries a commit users get — `feat`, 
 Because this repository lands pull requests as merge commits as well as squashes, that gate
 reads the pull-request title line of a merge commit in addition to the subject.
 
-Pre-release tags (`vX.Y.Z-beta.N`, `vX.Y.Z-rc.N`) are still pushed by hand and publish under
-the `beta` dist-tag; only those get their GitHub Release created by `publish.yml`.
+A tag carrying any semver pre-release part (`vX.Y.Z-beta.N`, `-rc.N`, `-alpha.N`, anything
+after the `-`) is still pushed by hand. `publish.yml` publishes it under the `beta` dist-tag
+and creates its GitHub Release, marked as a pre-release. A stable tag has no `-`, and its
+Release is release-please's to create.

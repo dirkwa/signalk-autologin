@@ -97,12 +97,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Always true: the job's own condition already limits it to tags
+      # carrying a pre-release part, so an identifier other than
+      # -beta./-rc. cannot be published here as a full release.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
