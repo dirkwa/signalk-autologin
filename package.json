@@ -17,8 +17,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" && eslint --fix \"src/**/*.{ts,tsx}\"",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "build:plugin": "tsc",
+    "typecheck:panel": "tsc -p src/configpanel --noEmit",
     "build:config": "vite build",
-    "build": "npm run build:plugin && npm run build:config",
+    "build": "npm run build:plugin && npm run typecheck:panel && npm run build:config",
     "test": "vitest run",
     "prepublishOnly": "npm run build"
   },

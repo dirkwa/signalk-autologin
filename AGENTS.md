@@ -94,8 +94,11 @@ server seeds the cookie. Do not try to "fix" this from plugin space; it is archi
   and not a second React copy.
 - Requires **signalk-server ≥ 2.27.0** (the version that exposes `window.__SK_REACT__`). Reflect
   that in `engines.signalk`.
-- The panel and its host-shim are excluded from `tsc` (see `tsconfig.json` `exclude`) — Vite/esbuild
-  transpiles the TSX. `tsc` only builds the plugin core under `src/` (minus `src/configpanel`).
+- The panel and its host-shim are excluded from the root `tsc` (see `tsconfig.json` `exclude`) —
+  Vite/esbuild transpiles the TSX, and `tsc` only builds the plugin core under `src/` (minus
+  `src/configpanel`). The panel is typechecked separately by `src/configpanel/tsconfig.json`,
+  run as `npm run typecheck:panel` in the middle of `npm run build`; it carries the DOM and JSX
+  settings that must not reach the plugin compile, and emits nothing.
 
 ## Build
 
@@ -152,8 +155,8 @@ Maintained by Dirk Wahrheit. Follow strictly.
 ### Pre-PR / pre-push checklist
 
 1. `npm run format` — prettier `--write` + eslint `--fix`.
-2. `npm run build` — `tsc` + `vite build` must both succeed; sanity-check the panel bundle did
-   not bundle its own React (host-shim present).
+2. `npm run build` — `tsc`, `typecheck:panel` and `vite build` must all succeed; sanity-check
+   the panel bundle did not bundle its own React (host-shim present).
 3. `npm run lint` — read-only verification of step 1.
 4. `npm test` — the unit suite.
 5. Verify the plugin end-to-end against a security-enabled server (see Local verification).
