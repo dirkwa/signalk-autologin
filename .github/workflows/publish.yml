@@ -6,17 +6,28 @@ name: Publish Package
 # leading digits only; the publish step routes them to npm's `beta`
 # dist-tag instead of `latest`.
 #
-# publish runs first; the GitHub Release is created only after a
-# successful npm publish (release `needs: publish`), so a failed build
-# or publish never leaves an orphaned Release with no installable package.
+# A real release's tag and GitHub Release are both created by
+# release-please, which then dispatches this workflow on the tag — a tag
+# pushed with GITHUB_TOKEN starts no workflow, and npm's trusted publishing
+# is bound to this filename, so the dispatch is how publishing happens.
+# workflow_dispatch is therefore required, not a convenience.
+#
+# Only a hand-pushed pre-release tag still needs a Release made here, and
+# it is created after a successful npm publish (`needs: publish`) so a
+# failed build never leaves an orphaned Release with no installable
+# package.
 
 on:
   push:
     tags:
       - 'v[0-9]*.[0-9]*.[0-9]*'
+  workflow_dispatch:
 
 jobs:
   publish:
+    # A dispatch can name any ref; only a release tag is published. The
+    # semver step below is what rejects a malformed tag.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
       id-token: write
@@ -54,18 +65,29 @@ jobs:
       - name: Test
         run: npm test
 
+      # Any tag carrying a semver pre-release part (the `-…` before an
+      # optional `+build`) goes to the `beta` dist-tag, not just -beta./-rc.
+      # Enumerating identifiers would send an unlisted one such as
+      # `-alpha.1` to `latest`, where a plain `npm install` would hand it to
+      # every user as the current release.
       - name: Publish
         env:
           REF: ${{ github.ref }}
         run: |
-          if [[ "$REF" == refs/tags/*-beta.* ]] || [[ "$REF" == refs/tags/*-rc.* ]]; then
+          if [[ "${REF#refs/tags/}" =~ ^v[^+-]+- ]]; then
             npm publish --provenance --access public --tag beta
           else
             npm publish --provenance --access public
           fi
 
   release:
+    # release-please creates the GitHub Release for a real version, so only
+    # a hand-pushed pre-release tag needs one made here; running for every
+    # tag would collide with the Release that already exists. A stable tag
+    # has no `-`, so the test matches exactly the tags publish sends to the
+    # `beta` dist-tag.
     needs: publish
+    if: ${{ contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -75,12 +97,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Always true: the job's own condition already limits it to tags
+      # carrying a pre-release part, so an identifier other than
+      # -beta./-rc. cannot be published here as a full release.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-rc.') }}
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
