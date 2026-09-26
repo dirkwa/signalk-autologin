@@ -37,10 +37,48 @@ in-memory changes are reverted. Use **Clear autologin cookie** in the config pan
 
 ## Configuration
 
+- **Grant admin to every device** — on (default) grants admin to every device as described
+  above. Off: only token sign-in (see below), and the two settings that follow have no effect.
+  Turning it off signs out no browser: one this plugin already signed in holds an admin cookie
+  the server itself accepts, until the cookie expires (Chromium caps it at 400 days) or
+  **Clear autologin cookie** removes it in that browser.
 - **Admin user to authenticate as** — the existing admin user whose identity every device is
   granted. Leave blank to auto-pick the first admin user.
 - **Allow read-only access without the autologin cookie** — when on (default), a device that
   has not yet been seeded can still read data (no writes, no admin). Reverted on disable.
+
+## Token sign-in (kiosks)
+
+Turn **Grant admin to every device** off and the plugin stops signing anyone in by itself.
+It then only signs in a browser that presents a sign-in token — a JWT the server issued for an
+existing user — and only as that user. Every other device logs in normally. This is how the
+[universal installer's `signalk kiosk`](https://github.com/dirkwa/signalk-universal-installer/blob/master/docs/kiosk.md)
+gets a keyboard-less screen past the login form without opening admin to the whole network.
+
+A browser signs in by opening:
+
+```text
+/signalk-autologin/seed#token=<token>&next=/@mxtommy/kip/
+```
+
+The token rides in the URL **fragment**, which the browser never sends to the server — as a
+query string it would land in the server's request log, and from there in shared bug-report
+bundles. The page removes the fragment from the address bar, sends the token to
+`POST /signalk-autologin/session` in an `Authorization: Bearer` header, and the response sets
+the httpOnly session cookie. The plugin checks the token the way the server checks the cookie
+on every later request: signed with this server's secret, not expired, naming a user that still
+exists. `next` must be a path on this server; anything else lands on `/`.
+
+Mint a token for a user with `signalk-generate-token -u <user> -e 10y -s <path to security.json>`.
+Deleting the user revokes every token issued for it. A token names the user and nothing else, so
+once a user of the same name exists again, tokens issued before work again.
+
+The access is exactly the user's: a `readwrite` user can use dashboards such as KIP and
+Freeboard-SK with live data, but the Admin UI shows its login form for anyone who is not admin,
+because it treats the first 401 from its admin-only calls as a logged-out session.
+
+Chromium caps a cookie's lifetime at 400 days, so a kiosk should open `/seed` at every browser
+start rather than rely on the cookie; `signalk kiosk` does.
 
 ## The one limitation
 

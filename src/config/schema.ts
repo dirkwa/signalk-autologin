@@ -1,6 +1,17 @@
 import { Type, Static } from '@sinclair/typebox'
 
 export const ConfigSchema = Type.Object({
+  networkWideAdmin: Type.Boolean({
+    default: true,
+    title: 'Grant admin to every device',
+    description:
+      'On (default): every device that can reach the server is signed in as ' +
+      'the admin user below. Off: only a browser that presents a sign-in ' +
+      'token for an existing user through /signalk-autologin/seed is signed ' +
+      'in, as that user — for example a screen set up by the universal ' +
+      "installer's `signalk kiosk` — and every other device logs in " +
+      'normally. The two settings below apply only when this is on.'
+  }),
   adminUser: Type.String({
     default: '',
     title: 'Admin user to authenticate as',
@@ -24,6 +35,7 @@ export type Config = Static<typeof ConfigSchema>
 // SignalK uses schema `default` only to seed the config form, not the runtime
 // config object — deep-merge these in start().
 export const SCHEMA_DEFAULTS: Config = {
+  networkWideAdmin: true,
   adminUser: '',
   enableReadonlyFallback: true
 }
