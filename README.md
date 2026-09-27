@@ -58,7 +58,7 @@ gets a keyboard-less screen past the login form without opening admin to the who
 A browser signs in by opening:
 
 ```text
-/signalk-autologin/seed#token=<token>&next=/@mxtommy/kip/
+/signalk-autologin/seed#token=<token>&next=/@signalk/freeboard-sk/
 ```
 
 The token rides in the URL **fragment**, which the browser never sends to the server — as a
@@ -73,9 +73,9 @@ Mint a token for a user with `signalk-generate-token -u <user> -e 10y -s <path t
 Deleting the user revokes every token issued for it. A token names the user and nothing else, so
 once a user of the same name exists again, tokens issued before work again.
 
-The access is exactly the user's: a `readwrite` user can use dashboards such as KIP and
-Freeboard-SK with live data, but the Admin UI shows its login form for anyone who is not admin,
-because it treats the first 401 from its admin-only calls as a logged-out session.
+The access is exactly the user's: a `readwrite` user can use webapps such as Freeboard-SK with
+live data, but the Admin UI shows its login form for anyone who is not admin, because it treats
+the first 401 from its admin-only calls as a logged-out session.
 
 Chromium caps a cookie's lifetime at 400 days, so a kiosk should open `/seed` at every browser
 start rather than rely on the cookie; `signalk kiosk` does.
