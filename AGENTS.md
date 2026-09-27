@@ -62,6 +62,19 @@ server seeds the cookie. Do not try to "fix" this from plugin space; it is archi
   handlers guard on the module-scoped `active` flag and no-op (just redirect, no cookie) once the
   plugin is stopped. Register them exactly once per process (`routesRegistered` guard) so a
   start→stop→start cycle does not double-register.
+- **Token sign-in (`networkWideAdmin: false`) makes no strategy mutations.** `start()` returns
+  before `applyStrategyMutations` in that mode, so no `authorizeWS`/`getLoginStatus` wrap and no
+  `allow_readonly` change: the only effect is that `POST /signalk-autologin/session` with a valid
+  `Authorization: Bearer <token>` plants that token as the cookie. `verifyUserToken` repeats the
+  server's own checks (secret, expiry, user still exists) rather than trusting `req.skPrincipal`,
+  because the server's middleware prefers an existing cookie over the header — a stale valid
+  cookie would otherwise vouch for an invalid header token.
+- **The sign-in token never travels in a query string.** The server logs request URLs, and
+  `signalk bug-report` bundles those logs. `/signalk-autologin/seed` reads it from the fragment
+  (`src/seedPage.ts`); keep it that way.
+- **The config panel spreads the saved configuration before its own fields.** A setting the
+  panel does not send falls back to its schema default on save — for `networkWideAdmin` that
+  default grants admin to every device.
 - **The cookie recipe must mirror the server's `setSessionCookie`.** `JAUTHENTICATION` is
   httpOnly; `skLoginInfo` is non-httpOnly; both `sameSite: 'strict'`, `secure` matching the
   request (`req.secure || x-forwarded-proto === 'https'`), long `maxAge`. If the server changes
@@ -120,6 +133,13 @@ throwaway security-enabled server:
    read → 200 (allow_readonly), `GET /signalk-autologin/session` → 302 + `Set-Cookie`; with the
    cookie admin routes → 200 and a WS PUT → 405 (authorized) vs 403 without; disable → cookie-less
    read back to 401 and the seed route sets no cookie; `security.json` byte-unchanged.
+4. Token sign-in: set `networkWideAdmin: false`, add a `readwrite` user and mint its token with
+   `<server>/bin/signalk-generate-token -u <user> -e 1y -s <configdir>/security.json`. Confirm:
+   `GET /signalk-autologin/session` sets no cookie; `POST /signalk-autologin/session` with
+   `Authorization: Bearer <token>` → 204 + httpOnly `JAUTHENTICATION`, with a token for a deleted
+   user or another secret → 401; `/skServer/loginStatus` with the cookie names the user; a browser
+   opening `/signalk-autologin/seed#token=<token>&next=/admin/` ends on `/admin/` with no token
+   in its URL; the token appears nowhere in the server log.
 
 ## File layout
 
@@ -127,7 +147,10 @@ throwaway security-enabled server:
 src/
   index.ts                      plugin entry — start/stop, un-gated seeding+bootstrap routes,
                                   registerWithRouter status endpoint
-  autologin.ts                  token mint + strategy save/wrap/restore (Express-free, testable)
+  autologin.ts                  token mint + strategy save/wrap/restore, and the token
+                                  sign-in checks (safeNextPath, bearerToken, verifyUserToken);
+                                  Express-free, testable
+  seedPage.ts                   the /signalk-autologin/seed page (token read from the fragment)
   config/schema.ts              typebox ConfigSchema + Config + SCHEMA_DEFAULTS
   configpanel/
     PluginConfigurationPanel.tsx  React 19 panel (red security banner, seed/clear buttons)

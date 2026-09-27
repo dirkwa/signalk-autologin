@@ -1,6 +1,7 @@
 import React, { CSSProperties, useCallback, useEffect, useState } from 'react'
 
 interface PluginConfig {
+  networkWideAdmin?: boolean
   adminUser?: string
   enableReadonlyFallback?: boolean
 }
@@ -16,6 +17,7 @@ interface PluginConfigurationPanelProps {
 
 interface StatusResponse {
   active: boolean
+  mode?: 'network-wide' | 'token'
   adminUser: string | null
   seedUrl: string
   logoutUrl: string
@@ -117,6 +119,9 @@ export default function PluginConfigurationPanel({
   configuration,
   save
 }: PluginConfigurationPanelProps): React.ReactElement {
+  const [networkWide, setNetworkWide] = useState<boolean>(
+    configuration.networkWideAdmin ?? true
+  )
   const [adminUser, setAdminUser] = useState<string>(
     configuration.adminUser ?? ''
   )
@@ -142,36 +147,68 @@ export default function PluginConfigurationPanel({
   }, [refreshStatus])
 
   const onSave = useCallback(() => {
+    // Spread first: a setting this panel does not render must survive a save.
+    // Dropping networkWideAdmin here would silently fall back to its default,
+    // which grants admin to every device.
     save({
+      ...configuration,
+      networkWideAdmin: networkWide,
       adminUser: adminUser.trim(),
       enableReadonlyFallback: readonlyFallback
     })
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2500)
     window.setTimeout(() => void refreshStatus(), 1500)
-  }, [adminUser, readonlyFallback, save, refreshStatus])
+  }, [
+    configuration,
+    networkWide,
+    adminUser,
+    readonlyFallback,
+    save,
+    refreshStatus
+  ])
 
   const seedUrl = status?.seedUrl ?? '/signalk-autologin/session'
   const logoutUrl = status?.logoutUrl ?? '/signalk-autologin/session?logout=1'
 
   return (
     <div style={S.root}>
-      <div style={S.warn}>
-        <div style={S.warnTitle}>⚠️ Convenience autologin is ACTIVE</div>
-        Every device that can reach this server is granted full{' '}
-        <strong>ADMIN</strong> access with no login. Only use on a trusted,
-        isolated network (e.g. the boat&apos;s own Wi-Fi). Do{' '}
-        <strong>NOT</strong> enable on any server exposed to the internet or an
-        untrusted LAN. Disable this plugin to restore normal per-user login.
-      </div>
+      {networkWide ? (
+        <div style={S.warn}>
+          <div style={S.warnTitle}>⚠️ Convenience autologin is ACTIVE</div>
+          Every device that can reach this server is granted full{' '}
+          <strong>ADMIN</strong> access with no login. Only use on a trusted,
+          isolated network (e.g. the boat&apos;s own Wi-Fi). Do{' '}
+          <strong>NOT</strong> enable on any server exposed to the internet or
+          an untrusted LAN. Disable this plugin to restore normal per-user
+          login.
+        </div>
+      ) : (
+        <div style={S.note}>
+          <strong>Token sign-in only.</strong> A browser that opens{' '}
+          <code>/signalk-autologin/seed#token=…</code> with a sign-in token is
+          signed in as the user that token names — for example a screen set up
+          by the universal installer&apos;s <code>signalk kiosk</code>. Other
+          devices log in normally, except browsers this plugin signed in while
+          it granted admin to every device: their admin cookie stays valid until
+          it expires (Chromium caps it at 400 days) or is removed with{' '}
+          <em>Clear autologin cookie</em> in that browser.
+        </div>
+      )}
 
       <div style={S.status}>
         {status ? (
           status.active ? (
-            <span>
-              Status: <strong>active</strong> — every device is admin as{' '}
-              <strong>{status.adminUser}</strong>.
-            </span>
+            status.mode === 'token' ? (
+              <span>
+                Status: <strong>active</strong> — token sign-in only.
+              </span>
+            ) : (
+              <span>
+                Status: <strong>active</strong> — every device is admin as{' '}
+                <strong>{status.adminUser}</strong>.
+              </span>
+            )
           ) : (
             <span>
               Status: <strong>inactive</strong>. Either security is disabled or
@@ -186,6 +223,21 @@ export default function PluginConfigurationPanel({
       <div style={S.sectionTitle}>Settings</div>
 
       <div style={S.field}>
+        <label style={S.row}>
+          <input
+            type="checkbox"
+            checked={networkWide}
+            onChange={(e) => setNetworkWide(e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Grant admin to every device</span>
+        </label>
+        <div style={S.hint}>
+          Off: only browsers holding a sign-in token are signed in, and the two
+          settings below have no effect.
+        </div>
+      </div>
+
+      <div style={S.field}>
         <label style={S.label} htmlFor="adminUser">
           Admin user to authenticate as
         </label>
@@ -194,6 +246,7 @@ export default function PluginConfigurationPanel({
           style={S.input}
           type="text"
           value={adminUser}
+          disabled={!networkWide}
           placeholder="(auto-pick first admin user)"
           onChange={(e) => setAdminUser(e.target.value)}
         />
@@ -209,6 +262,7 @@ export default function PluginConfigurationPanel({
           <input
             type="checkbox"
             checked={readonlyFallback}
+            disabled={!networkWide}
             onChange={(e) => setReadonlyFallback(e.target.checked)}
           />
           <span style={{ fontWeight: 600 }}>
@@ -225,29 +279,33 @@ export default function PluginConfigurationPanel({
         <button type="button" style={S.btn} onClick={onSave}>
           {saved ? 'Saved ✓' : 'Save'}
         </button>
-        <a style={S.btnGhost} href={seedUrl}>
-          Seed this browser now
-        </a>
+        {networkWide && (
+          <a style={S.btnGhost} href={seedUrl}>
+            Seed this browser now
+          </a>
+        )}
         <a style={S.btnGhost} href={logoutUrl}>
           Clear autologin cookie
         </a>
       </div>
 
-      <div style={S.note}>
-        <strong>How it works.</strong> The plugin gives your browser a
-        long-lived admin session cookie via an unauthenticated endpoint, then
-        every HTTP request and WebSocket connection is treated as admin.
-        <br />
-        <br />
-        <strong>One limitation.</strong> The very first request from a brand-new
-        browser that carries no cookie and has never hit{' '}
-        <code>/signalk-autologin/session</code> cannot be retroactively made
-        admin on admin/write routes — the server&apos;s HTTP auth gate runs
-        before any plugin. Navigating to the server (or clicking{' '}
-        <em>Seed this browser now</em>) sets the cookie; from then on all
-        traffic is admin. &quot;Clear autologin cookie&quot; removes it from
-        this browser.
-      </div>
+      {networkWide && (
+        <div style={S.note}>
+          <strong>How it works.</strong> The plugin gives your browser a
+          long-lived admin session cookie via an unauthenticated endpoint, then
+          every HTTP request and WebSocket connection is treated as admin.
+          <br />
+          <br />
+          <strong>One limitation.</strong> The very first request from a
+          brand-new browser that carries no cookie and has never hit{' '}
+          <code>/signalk-autologin/session</code> cannot be retroactively made
+          admin on admin/write routes — the server&apos;s HTTP auth gate runs
+          before any plugin. Navigating to the server (or clicking{' '}
+          <em>Seed this browser now</em>) sets the cookie; from then on all
+          traffic is admin. &quot;Clear autologin cookie&quot; removes it from
+          this browser.
+        </div>
+      )}
     </div>
   )
 }

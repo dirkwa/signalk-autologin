@@ -160,3 +160,61 @@ export function restoreStrategyMutations(
     config.allow_readonly = state.originalAllowReadonly
   }
 }
+
+// ---------------------------------------------------------------------------
+// Token sign-in: a browser that holds a token for an existing user (a kiosk
+// set up by the universal installer's `signalk kiosk`) is signed in as that
+// user alone. Works with or without the network-wide admin grant above.
+// ---------------------------------------------------------------------------
+
+// Where to send the browser after seeding: an absolute path on this server,
+// or the fallback. Anything with a scheme, a protocol-relative `//host`, or a
+// backslash (browsers read `/\host` as `//host`) would turn the seeding
+// routes into an open redirect, as would control characters.
+export function safeNextPath(next: unknown, fallback: string): string {
+  if (typeof next !== 'string' || next.length === 0 || next.length > 2048) {
+    return fallback
+  }
+  if (!next.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
+    return fallback
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(next)) {
+    return fallback
+  }
+  return next
+}
+
+// The token from an `Authorization: Bearer <token>` header.
+export function bearerToken(header: unknown): string | undefined {
+  if (typeof header !== 'string') {
+    return undefined
+  }
+  const match = /^Bearer\s+(\S+)$/i.exec(header.trim())
+  return match ? match[1] : undefined
+}
+
+// The user a sign-in token names — when the server's own secret signed it,
+// it has not expired, and that user still exists. The server applies the same
+// checks to the cookie on every later request; running them here rejects a
+// bad token at sign-in instead of planting a cookie that fails on the next
+// page load.
+export function verifyUserToken(
+  token: string,
+  config: SecurityConfiguration
+): string | undefined {
+  let payload: unknown
+  try {
+    payload = jwt.verify(token, config.secretKey)
+  } catch {
+    return undefined
+  }
+  const id =
+    typeof payload === 'object' && payload !== null
+      ? (payload as { id?: unknown }).id
+      : undefined
+  if (typeof id !== 'string' || id === '') {
+    return undefined
+  }
+  return (config.users ?? []).some((u) => u.username === id) ? id : undefined
+}
