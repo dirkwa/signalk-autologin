@@ -100,7 +100,7 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
     const { strategy, originalAuthorizeWS, originalGetLoginStatus } =
       makeStrategy(config)
 
-    const state = applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    const state = applyStrategyMutations(strategy, config, 'admin', mintAdminToken(config.secretKey, 'admin'), true)
 
     // allow_readonly flipped on
     expect(config.allow_readonly).toBe(true)
@@ -147,7 +147,7 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
   it('does not clobber a later wrapper installed on top of ours', () => {
     const config = makeConfig()
     const { strategy } = makeStrategy(config)
-    const state = applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    const state = applyStrategyMutations(strategy, config, 'admin', mintAdminToken(config.secretKey, 'admin'), true)
 
     // Another plugin wraps authorizeWS after us.
     const laterWrapper: AuthorizeWS = () => {}
@@ -162,7 +162,7 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
   it('never reports a browser without the cookie as signed in', () => {
     const config = makeConfig()
     const { strategy } = makeStrategy(config)
-    applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    applyStrategyMutations(strategy, config, 'admin', mintAdminToken(config.secretKey, 'admin'), true)
     expect(strategy.getLoginStatus!({})).not.toHaveProperty('userLevel')
     expect(strategy.getLoginStatus!({}).status).toBe('notLoggedIn')
   })
@@ -178,7 +178,7 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
       getConfiguration: () => config,
       getLoginStatus: () => signedIn
     }
-    applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    applyStrategyMutations(strategy, config, 'admin', mintAdminToken(config.secretKey, 'admin'), true)
     expect(strategy.getLoginStatus!({})).toEqual(signedIn)
   })
 
@@ -194,7 +194,17 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
       getConfiguration: () => config,
       getLoginStatus: () => oidc
     }
-    applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    applyStrategyMutations(strategy, config, 'admin', mintAdminToken(config.secretKey, 'admin'), true)
     expect(strategy.getLoginStatus!({})).toEqual(oidc)
+  })
+
+  it('stops pointing at the seeding route once the admin user is gone', () => {
+    const config = makeConfig()
+    const { strategy } = makeStrategy(config)
+    const token = mintAdminToken(config.secretKey, 'admin')
+    applyStrategyMutations(strategy, config, 'admin', token, true)
+    expect(strategy.getLoginStatus!({})).toHaveProperty('oidcAutoLogin', true)
+    config.users = config.users.filter((u) => u.username !== 'admin')
+    expect(strategy.getLoginStatus!({})).toEqual({ status: 'notLoggedIn' })
   })
 })

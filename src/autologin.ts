@@ -130,7 +130,13 @@ export function applyStrategyMutations(
   if (originalStatus) {
     const wrappedStatus: GetLoginStatus = (req: unknown) => {
       const base = originalStatus(req)
-      if (base.status === 'loggedIn' || base.oidcEnabled) {
+      // A token whose user was deleted since start would be seeded only to
+      // be rejected, sending the browser round in circles.
+      if (
+        base.status === 'loggedIn' ||
+        base.oidcEnabled ||
+        verifyUserToken(token, strategy.getConfiguration()) === undefined
+      ) {
         return base
       }
       return {
