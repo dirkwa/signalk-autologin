@@ -39,8 +39,15 @@ So the plugin:
    it through the server's normal path — no server patching.
 
 Defensive extras, all in-memory and reverted on `stop()`: flip `allow_readonly = true` so
-cookie-less reads resolve, and wrap the mutable `authorizeWS` + `getLoginStatus` (the latter is
-cosmetic — it makes the Admin UI show "logged in").
+cookie-less reads resolve, and wrap the mutable `authorizeWS` + `getLoginStatus`.
+
+**`getLoginStatus` must stay truthful.** Only the cookie grants admin, so a browser without it
+must never be reported `loggedIn`: the Admin UI would hide its login form while every admin
+request answers 401, and Logout would appear to do nothing. The wrap instead adds the Admin
+UI's auto-login fields (`oidcEnabled`, `oidcAutoLogin`, `oidcLoginUrl` → the seeding route) to
+a not-signed-in status, so the login page sends the browser to be seeded. A status that is
+signed in, or a server with real OIDC, passes through unchanged. The seeding route reads the
+Admin UI's `redirect` parameter as well as `next`.
 
 **The honest limitation** (documented in README + panel): a raw API/WS client that never carries
 the cookie and never hits the seeding endpoint cannot be rescued on its first admin/write

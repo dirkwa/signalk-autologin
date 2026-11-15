@@ -78,8 +78,10 @@ export default function (app: ServerAPI): Plugin {
     res.clearCookie(LOGININFO_COOKIE)
   }
 
+  // The Admin UI's login page arrives here with `redirect`; links and the
+  // config panel use `next`.
   function handleSession(req: Request, res: Response): void {
-    const next = safeNextPath(req.query.next, '/admin/')
+    const next = safeNextPath(req.query.next ?? req.query.redirect, '/admin/')
     if (!active) {
       res.redirect(next)
       return

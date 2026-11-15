@@ -114,11 +114,12 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
     })
     expect(req.skIsAuthenticated).toBe(true)
 
-    // getLoginStatus reports admin loggedIn
+    // a browser without the cookie is pointed at the seeding route
     expect(strategy.getLoginStatus!({})).toMatchObject({
-      status: 'loggedIn',
-      userLevel: 'admin',
-      username: 'admin'
+      status: 'notLoggedIn',
+      oidcEnabled: true,
+      oidcAutoLogin: true,
+      oidcLoginUrl: '/signalk-autologin/session'
     })
 
     restoreStrategyMutations(strategy, config, state)
@@ -156,5 +157,44 @@ describe('applyStrategyMutations / restoreStrategyMutations', () => {
 
     // identity guard: our restore must not overwrite the newer wrapper
     expect(strategy.authorizeWS).toBe(laterWrapper)
+  })
+
+  it('never reports a browser without the cookie as signed in', () => {
+    const config = makeConfig()
+    const { strategy } = makeStrategy(config)
+    applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    expect(strategy.getLoginStatus!({})).not.toHaveProperty('userLevel')
+    expect(strategy.getLoginStatus!({}).status).toBe('notLoggedIn')
+  })
+
+  it('passes a signed-in status through unchanged', () => {
+    const config = makeConfig()
+    const signedIn = {
+      status: 'loggedIn',
+      userLevel: 'readwrite',
+      username: 'bob'
+    }
+    const strategy: SecurityStrategy = {
+      getConfiguration: () => config,
+      getLoginStatus: () => signedIn
+    }
+    applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    expect(strategy.getLoginStatus!({})).toEqual(signedIn)
+  })
+
+  it('leaves a server with its own OIDC sign-in alone', () => {
+    const config = makeConfig()
+    const oidc = {
+      status: 'notLoggedIn',
+      oidcEnabled: true,
+      oidcAutoLogin: false,
+      oidcLoginUrl: '/signalk/v1/auth/oidc/login'
+    }
+    const strategy: SecurityStrategy = {
+      getConfiguration: () => config,
+      getLoginStatus: () => oidc
+    }
+    applyStrategyMutations(strategy, config, 'admin', 'tok', true)
+    expect(strategy.getLoginStatus!({})).toEqual(oidc)
   })
 })

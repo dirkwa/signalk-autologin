@@ -28,8 +28,13 @@ existing admin identity and makes only in-memory, fully-reversible changes while
 1. Install the plugin. It is **enabled by default** on install.
 2. Ensure at least one **admin** user exists (Security → Users). If none exists, the plugin
    stays inert and says so in its status line.
-3. Navigate to the server (or open the plugin config and click **Seed this browser now**). Your
-   browser receives the admin cookie and lands in the Admin UI already logged in.
+3. Open any admin page of the Admin UI, or tap **Login** (or click **Seed this browser now** in
+   the plugin config). The login page sends the browser to the plugin, which plants the admin
+   cookie and returns it signed in. Pages anyone may read (the dashboard, with the read-only
+   setting below) stay read-only until then.
+
+**Logout** in the Admin UI signs that browser out until it taps **Login** again. To sign in as
+another user with a password, open `/admin/#/login?noAutoLogin=true`.
 
 To turn it off, **disable the plugin**. Original authentication behaviour is restored and any
 in-memory changes are reverted. Use **Clear autologin cookie** in the config panel (or visit
