@@ -38,6 +38,9 @@ export interface SecurityStrategy {
 // convenience cookie effectively never expires while the plugin is enabled.
 const TOKEN_EXPIRY = '10y'
 
+// The un-gated route that plants the admin cookie in a browser.
+export const SEED_PATH = '/signalk-autologin/session'
+
 export function resolveAdminUsername(
   config: SecurityConfiguration,
   preferred: string
@@ -117,17 +120,31 @@ export function applyStrategyMutations(
   strategy.authorizeWS = wrappedWS
   state.wrappedAuthorizeWS = wrappedWS
 
-  // Cosmetic: make the admin UI's /loginStatus report logged-in so it does not
-  // show a login prompt. The cookie is what actually authenticates requests.
+  // The server's own login status stays truthful: only the cookie grants
+  // admin, so a browser without it must not be told it is signed in, or the
+  // Admin UI hides its login form while every admin request answers 401.
+  // Instead it is pointed at the seeding route through the auto-login fields
+  // the Admin UI's login page already follows, and comes back signed in.
+  // A server with real OIDC keeps its own sign-in untouched.
   const originalStatus = state.originalGetLoginStatus
   if (originalStatus) {
     const wrappedStatus: GetLoginStatus = (req: unknown) => {
       const base = originalStatus(req)
+      // A token whose user was deleted since start would be seeded only to
+      // be rejected, sending the browser round in circles.
+      if (
+        base.status === 'loggedIn' ||
+        base.oidcEnabled ||
+        verifyUserToken(token, strategy.getConfiguration()) === undefined
+      ) {
+        return base
+      }
       return {
         ...base,
-        status: 'loggedIn',
-        userLevel: 'admin',
-        username: adminUsername
+        oidcEnabled: true,
+        oidcAutoLogin: true,
+        oidcLoginUrl: SEED_PATH,
+        oidcProviderName: 'Autologin'
       }
     }
     strategy.getLoginStatus = wrappedStatus
